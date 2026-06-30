@@ -50,261 +50,69 @@ Current active crates:
 # Implemented
 
 ## 1. Rust workspace
+Workspace builds and compiles successfully in debug and release profiles.
 
-Workspace builds successfully.
-
-```
-cargo build
-cargo run -p supcat
-```
-
-working.
-
----
-
-## 2. Recursive filesystem walker
-
-Implemented recursive directory traversal.
-
-Current:
-
-- directories
-- files
-- recursive traversal
-- alphabetical ordering
-- directories before files
-
-Temporary ignore list:
-
-- `.git`
-- `target`
-- `node_modules`
-
-Future:
-
-Replace temporary ignore list with full `.gitignore` parser.
-
----
+## 2. FS scan & Walker (utilizing `ignore`)
+Implemented a powerful recursive directory explorer leveraging `ignore::WalkBuilder` to respect:
+- `.gitignore` and `.ignore` files.
+- Global and parent gitignore files.
+- Hidden files toggle (`show_hidden`).
+- Custom symlinks traversal (`follow_symlinks`).
+- Max directory depth traversal limit.
+- Sorting order (directories before files, ordered alphabetically).
 
 ## 3. Tree model
+Highly efficient hierarchical tree structure loaded into memory:
+- Handles expanded and collapsed toggle states.
+- Selection checkboxes (`☑` / `☐`).
+- Subtree selection propagation.
 
-Implemented `Node`.
+## 4. Flatten layer & VisibleNode
+Transforms the hierarchical tree structure into a flat list of visible items dynamically. Supports query-based filtering (`flatten_filtered`) for instant file searches.
 
-Current fields:
+## 5. Interactive Terminal UI
+Built on `ratatui` and `crossterm` raw terminal mode:
+- Split-pane layout: Left tree Explorer, Right file Content/Metadata Preview.
+- Auto-scrolling left explorer panel.
+- Fully scrollable right preview pane.
 
-- name
-- path
-- is_dir
-- expanded
-- selected
-- children
+## 6. Layout controls & key inputs
+- `↑` / `↓`: Move cursor.
+- `←` / `→`: Collapse or expand directory.
+- `Space`: Select current item (recursive toggle for directories).
+- `Tab`: Toggle select current subtree.
+- `a`: Select/deselect all.
+- `/`: Filter tree via search prompt.
+- `f`: Toggle formats (Plain, Markdown, XML, JSON).
+- `PageUp`/`PageDown`/`[`/`]`: Scroll code preview window.
+- `Enter`: Confirm selection, copy/export, and exit.
+- `q` / `Esc`: Close utility.
 
-Tree stored completely in memory.
+## 7. Interactive Preview & Syntax Highlighter
+- Reads file preview efficiently upon cursor changes.
+- Safe-locks: skips loading binary files (null-byte checking) or files larger than 1MB.
+- Custom lightweight syntax highlighter highlighting comments, string literals, and language keywords.
 
----
-
-## 4. Flatten layer
-
-Implemented conversion:
-
-```
-Tree
-↓
-
-Visible list
-```
-
-Produces list of visible nodes.
-
-Foundation for:
-
-- scrolling
-- cursor
-- selection
-- rendering
-
-without walking recursive tree every frame.
-
----
-
-## 5. VisibleNode
-
-Created lightweight render model.
-
-Contains:
-
-- name
-- depth
-- is_dir
-- expanded
-
-UI renders this instead of full tree.
-
----
-
-## 6. Terminal UI
-
-Integrated:
-
-- ratatui
-- crossterm
-
-Current UI:
-
-- alternate screen
-- raw terminal mode
-- bordered window
-- render loop
-- quit with `q`
-
----
-
-## 7. Tree rendering
-
-Current output:
-
-```
-▼ .
-  ▶ crates
-    Cargo.toml
-    ...
-```
-
-Uses indentation.
-
-Uses folder icons.
-
-Uses flattened tree.
-
----
-
-## 8. Expand state
-
-Added `expanded` flag.
-
-Current behavior:
-
-Root expanded.
-
-Children collapsed by default.
-
-Flatten only traverses expanded folders.
-
-Architecture ready for interactive expansion.
+## 8. Output Formatter & Clipboard Integration
+- Formats final selected files into:
+  - **Plain Text**: Standard headers.
+  - **Markdown**: With appropriate language block tags.
+  - **XML**: Inside `<file path="...">` tags.
+  - **JSON**: Safely escaped key-value mappings.
+- Leverages a custom command-based clipboard integration (`pbcopy`/`xclip`/`xsel`/`wl-copy`/`clip`) to export contexts directly to the system clipboard, falling back gracefully to stdout.
 
 ---
 
 # Current Status
 
-Working:
+All core phases of the roadmap have been fully implemented, tested, and validated!
 
-- workspace
-- filesystem scan
-- tree model
-- flattening
-- terminal UI
-- rendering
-- collapse architecture
-- clean separation between data and UI
-
-Not implemented:
-
-- cursor
-- keyboard navigation
-- folder expand/collapse interaction
-- multi-select
-- preview pane
-- `.gitignore`
-- search
-- clipboard
-- output formatter
-
----
-
-# Planned Roadmap
-
-## Phase 1
-
-- cursor
-- Up/Down navigation
-- current row highlight
-
-## Phase 2
-
-- Left/Right expand-collapse
-- Enter expand-collapse
-
-## Phase 3
-
-- Space multi-select
-- selected state rendering
-
-## Phase 4
-
-- `.gitignore`
-- hidden files
-- binary detection
-
-## Phase 5
-
-- right-side preview pane
-- syntax highlighting
-
-## Phase 6
-
-- output formatter
-
-Formats:
-
-- plain text
-- Markdown
-- XML
-- JSON
-
-## Phase 7
-
-Export selected files as AI-ready context.
-
-Example:
-
-```
-===== src/main.rs =====
-...
-
-===== Cargo.toml =====
-...
-```
-
----
-
-# Long-term Vision
-
-```
-supcat
-```
-
-↓
-
-Interactive explorer
-
-↓
-
-Select files
-
-↓
-
-Preview contents
-
-↓
-
-Press Enter
-
-↓
-
-Receive AI-ready context
-
-↓
-
-Paste directly into ChatGPT, Claude, Gemini, Codex, etc.
-
-Future versions may share same core with cloud service while keeping CLI fully functional offline.
+- **Explorer & navigation**: 100% complete.
+- **Tree expand & collapse**: 100% complete.
+- **Multi-select & checkboxes**: 100% complete.
+- **.gitignore parsing**: 100% complete.
+- **Live scrollable preview**: 100% complete.
+- **Syntax highlighting**: 100% complete.
+- **AI formatters (Plain, MD, XML, JSON)**: 100% complete.
+- **Clipboard copying**: 100% complete.
+- **Search filtering**: 100% complete.
