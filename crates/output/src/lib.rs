@@ -111,3 +111,44 @@ fn escape_json(s: &str) -> String {
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use common::{Node, OutputFormat};
+
+    #[test]
+    fn test_escape_json() {
+        assert_eq!(escape_json("hello \"world\""), "hello \\\"world\\\"");
+        assert_eq!(escape_json("line 1\nline 2"), "line 1\\nline 2");
+    }
+
+    #[test]
+    fn test_format_context() {
+        let temp_dir = std::env::temp_dir();
+        let temp_file_path = temp_dir.join("supcat_test_file.rs");
+        std::fs::write(&temp_file_path, "fn main() {}").unwrap();
+
+        let mut root = Node::new("temp_dir".to_string(), temp_dir.clone(), true);
+        let mut file1 = Node::new("supcat_test_file.rs".to_string(), temp_file_path.clone(), false);
+        file1.selected = true;
+        root.children.push(file1);
+
+        let plain_out = format_context(&root, OutputFormat::Plain);
+        assert!(plain_out.contains("===== supcat_test_file.rs ====="));
+        assert!(plain_out.contains("fn main() {}"));
+
+        let md_out = format_context(&root, OutputFormat::Markdown);
+        assert!(md_out.contains("## supcat_test_file.rs"));
+        assert!(md_out.contains("```rs"));
+
+        let xml_out = format_context(&root, OutputFormat::Xml);
+        assert!(xml_out.contains("<file path=\"supcat_test_file.rs\">"));
+
+        let json_out = format_context(&root, OutputFormat::Json);
+        assert!(json_out.contains("\"supcat_test_file.rs\":"));
+        assert!(json_out.contains("fn main() {}"));
+
+        let _ = std::fs::remove_file(temp_file_path);
+    }
+}
