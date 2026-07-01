@@ -144,6 +144,18 @@ jobs:
           # Actually do builds and make zips and whatnot
           dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
           echo "dist ran successfully"
+      - name: Install cargo-deb
+        if: runner.os == 'Linux' && contains(join(matrix.targets, ','), 'x86_64-unknown-linux-gnu')
+        run: cargo install cargo-deb
+      - name: Build Debian package
+        if: runner.os == 'Linux' && contains(join(matrix.targets, ','), 'x86_64-unknown-linux-gnu')
+        run: cargo deb -p supcat
+      - name: Upload Debian package
+        if: runner.os == 'Linux' && contains(join(matrix.targets, ','), 'x86_64-unknown-linux-gnu')
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-deb-package
+          path: target/debian/*.deb
       - id: cargo-dist
         name: Post-build
         # We force bash here just because github makes it really hard to get values up
