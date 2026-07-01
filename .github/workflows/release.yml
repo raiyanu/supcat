@@ -13,10 +13,9 @@
 # Note that the GitHub Release will be created with a generated
 # title/body based on your changelogs.
 
+name: Release
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  "contents": "write"
 
 # This task will run whenever you push a git tag that looks like a version
 # like "1.0.0", "v0.1.0-prerelease.1", "my-app/0.1.0", "releases/v1.0.0", etc.
@@ -145,18 +144,6 @@ jobs:
           # Actually do builds and make zips and whatnot
           dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
           echo "dist ran successfully"
-      - name: Install cargo-deb
-        if: runner.os == 'Linux' && contains(join(matrix.targets, ','), 'x86_64-unknown-linux-gnu')
-        run: cargo install cargo-deb
-      - name: Build Debian package
-        if: runner.os == 'Linux' && contains(join(matrix.targets, ','), 'x86_64-unknown-linux-gnu')
-        run: cargo deb -p supcat
-      - name: Upload Debian package
-        if: runner.os == 'Linux' && contains(join(matrix.targets, ','), 'x86_64-unknown-linux-gnu')
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifacts-deb-package
-          path: target/debian/*.deb
       - id: cargo-dist
         name: Post-build
         # We force bash here just because github makes it really hard to get values up
@@ -290,44 +277,15 @@ jobs:
           echo "$ANNOUNCEMENT_BODY" > $RUNNER_TEMP/notes.txt
 
           gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" artifacts/*
-  deploy-pages:
-    needs:
-      - host
 
-    if: ${{ needs.host.result == 'success' }}
-
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./www
-
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v5
   announce:
     needs:
       - plan
       - host
-      - deploy-pages
     # use "always() && ..." to allow us to wait for all publish jobs while
     # still allowing individual publish jobs to skip themselves (for prereleases).
     # "host" however must run to completion, no skipping allowed!
-    if: ${{ always()
-      && needs.host.result == 'success'
-      && needs.deploy-pages.result == 'success' }}
+    if: ${{ always() && needs.host.result == 'success' }}
     runs-on: "ubuntu-22.04"
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
