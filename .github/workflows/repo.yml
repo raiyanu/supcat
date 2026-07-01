@@ -26,7 +26,16 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev xz-utils
+          sudo apt-get install -y \
+            dpkg-dev \
+            apt-utils \
+            xz-utils
+
+      - name: Import GPG key
+        env:
+          APT_PRIVATE_KEY: ${{ secrets.APT_PRIVATE_KEY }}
+        run: |
+          echo "$APT_PRIVATE_KEY" | gpg --batch --import
 
       - name: Get latest release tag
         id: release
@@ -34,7 +43,7 @@ jobs:
           TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Download Linux release archive
+      - name: Download Linux archive
         run: |
           mkdir -p release
 
@@ -43,7 +52,7 @@ jobs:
             --pattern "supcat-x86_64-unknown-linux-gnu.tar.xz" \
             --dir release
 
-      - name: Extract release archive
+      - name: Extract archive
         run: |
           tar -xf release/supcat-x86_64-unknown-linux-gnu.tar.xz -C release
 
@@ -90,6 +99,8 @@ jobs:
             --clobber
 
       - name: Build APT repository
+        env:
+          KEY_ID: ${{ secrets.APT_KEY_ID }}
         run: |
           mkdir -p repo
 
@@ -105,25 +116,36 @@ jobs:
 
           gzip -kf repo/dists/stable/main/binary-amd64/Packages
 
-          cat > repo/dists/stable/Release <<EOF
-          Origin: SupCat
-          Label: SupCat
-          Suite: stable
-          Codename: stable
-          Architectures: amd64
-          Components: main
-          Description: SupCat APT Repository
-          EOF
+          apt-ftparchive release repo/dists/stable \
+            > repo/dists/stable/Release
+
+          gpg \
+            --batch \
+            --yes \
+            --default-key "$KEY_ID" \
+            --armor \
+            --detach-sign \
+            --output repo/dists/stable/Release.gpg \
+            repo/dists/stable/Release
+
+          gpg \
+            --batch \
+            --yes \
+            --default-key "$KEY_ID" \
+            --clearsign \
+            --output repo/dists/stable/InRelease \
+            repo/dists/stable/Release
 
           find repo
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: repo
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./repo
-
       - name: Deploy Pages
+        id: deployment
         uses: actions/deploy-pages@v5
