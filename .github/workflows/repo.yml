@@ -20,12 +20,26 @@ concurrency:
 jobs:
   publish:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Get latest release tag
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release tag
+        run: |
+          git fetch --tags
+          git checkout "${{ steps.release.outputs.tag }}"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -33,7 +47,7 @@ jobs:
       - name: Install cargo-deb
         run: cargo install cargo-deb
 
-      - name: Build release binary
+      - name: Build binary
         run: cargo build --release -p supcat
 
       - name: Build Debian package
@@ -43,30 +57,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          mkdir -p release-assets
 
-          mkdir release-assets
-
-          gh release download "$TAG" \
+          gh release download \
+            "${{ steps.release.outputs.tag }}" \
             --dir release-assets
 
-      - name: Upload deb to Release
+      - name: Upload Debian package to Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload \
-            "${{ github.event.release.tag_name }}" \
+            "${{ steps.release.outputs.tag }}" \
             target/debian/*.deb \
             --clobber
 
-      - name: Prepare repository
+      - name: Prepare APT repository
         run: |
           mkdir -p repo
 
-          # existing website
           cp -r www/* repo/
-
-          # deb package
           cp target/debian/*.deb repo/
 
           cd repo
@@ -78,11 +88,12 @@ jobs:
           Label: SupCat
           Suite: stable
           Codename: stable
-          Version: ${{ github.event.release.tag_name }}
+          Version: ${{ steps.release.outputs.tag }}
           Architectures: amd64
           Components: main
           Description: SupCat APT Repository
           EOF
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -92,4 +103,5 @@ jobs:
           path: ./repo
 
       - name: Deploy Pages
+        id: deployment
         uses: actions/deploy-pages@v5
