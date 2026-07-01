@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install SupCat</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: Inter, sans-serif;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+<div class="max-w-4xl mx-auto px-6 py-20">
+
+    <h1 class="text-5xl font-bold mb-4">
+        SupCat
+    </h1>
+
+    <p class="text-slate-400 text-lg mb-12">
+        Install the latest version from the official APT repository.
+    </p>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+
+        <div class="flex items-center justify-between px-5 py-3 border-b border-slate-800">
+            <span class="font-medium text-slate-300">
+                Ubuntu / Debian
+            </span>
+
+            <button
+                onclick="copyInstall()"
+                class="rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-sm font-medium transition">
+                Copy
+            </button>
+        </div>
+
+<pre id="install" class="overflow-auto p-6 text-sm leading-7 text-green-400"><code>curl -fsSL https://raiyanu.github.io/supcat/public.key \
+| sudo gpg --dearmor -o /usr/share/keyrings/supcat.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/supcat.gpg] https://raiyanu.github.io/supcat stable main" \
+| sudo tee /etc/apt/sources.list.d/supcat.list
+
+sudo apt update
+
+sudo apt install supcat</code></pre>
+
+    </div>
+
+    <div class="mt-10 text-slate-500 text-sm">
+        Requires sudo privileges.
+    </div>
+
+</div>
+
+<script>
+function copyInstall() {
+    const text = document.getElementById("install").innerText;
+
+    navigator.clipboard.writeText(text);
+
+    const btn = event.target;
+
+    btn.innerText = "Copied!";
+
+    setTimeout(() => {
+        btn.innerText = "Copy";
+    }, 2000);
+}
+</script>
+
+</body>
+</html>

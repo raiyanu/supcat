@@ -3,10 +3,23 @@ name = "supcat"
 version = "0.1.6"
 edition = "2024"
 repository = "https://github.com/raiyanu/supcat"
-description = "Supabase CLI is a command-line interface for Supabase"
+description = "A modern terminal super version of cat command"
 homepage = "https://github.com/raiyanu/supcat"
 authors = ["Raiyan <raiyan.c.me@gmail.com>"]
-
+keywords = [
+    "super cat",
+    "clipboard",
+    "terminal",
+    "cli",
+    "productivity",
+    "tui",
+    "cat",
+    "readfile",
+]
+categories = [
+    "command-line-utilities"
+]
+readme = "../../README.md"
 
 [package.metadata.wix]
 upgrade-guid = "B3254B34-B06A-46A1-BBCC-5E30D32081BB"
@@ -20,3 +33,32 @@ common = { path = "../common" }
 core = { path = "../core" }
 tui = { path = "../tui" }
 output = { path = "../output" }
+
+
+
+[package.metadata.deb]
+maintainer = "Raiyan <raiyan.c.me@gmail.com>"
+copyright = "2026 Raiyan Ahmed"
+license-file = ["../../LICENSE", "4"]
+
+section = "utils"
+priority = "optional"
+
+depends = "$auto"
+
+extended-description = """
+Supcat is a modern terminal clipboard manager and productivity CLI.
+"""
+
+assets = [
+    [
+        "target/release/supcat",
+        "usr/bin/",
+        "755",
+    ],
+    [
+        "../../README.md",
+        "usr/share/doc/supcat/README.md",
+        "644",
+    ],
+]
