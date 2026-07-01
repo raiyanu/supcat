@@ -1,106 +1,124 @@
-# supcat
+<div align="center">
+
+# 🐱 supcat
+
+**A blazing-fast, cross-platform terminal UI for preparing AI-ready context from your codebase.**
+
+Recursively explore directories, interactively select files, preview with syntax highlighting, and export a clean, structured context — ready to paste into any LLM.
+
 [![Release](https://github.com/raiyanu/supcat/actions/workflows/release.yml/badge.svg)](https://github.com/raiyanu/supcat/actions/workflows/release.yml)
+[![Rust Unit Test](https://github.com/raiyanu/supcat/actions/workflows/rust.yml/badge.svg)](https://github.com/raiyanu/supcat/actions/workflows/rust.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-orange.svg)](https://www.rust-lang.org/)
 
-`supcat` is a modern, cross-platform terminal-based AI context preparer. It allows you to recursively explore directories, interactively select files or folders, preview contents with syntax highlighting, and export selected files into a single structured, AI-ready context format. The output can be written to standard output or copied directly to your clipboard.
-
-## Features
-
-- **Split-Pane Layout**: An interactive terminal UI (TUI) featuring a left-pane directory tree explorer and a right-pane code preview window.
-- **Multi-Selection Checkboxes**: Select or deselect files and entire subtrees recursively (`☑` / `☐`).
-- **File & Folder Filtering**: Instantly search and filter the directory tree using `/`.
-- **Previews & Syntax Highlighting**: Preview code files under 1MB with a lightweight built-in syntax highlighter for keywords, strings, and comments (skips binary files safely).
-- **Gitignore Respect**: Leverages gitignore rules, supporting `.gitignore` and `.ignore` (both global and parent) by default.
-- **Multiple Output Formats**: Export context in **Plain Text**, **Markdown** (with language-specific code blocks), **XML** (using `<file path="...">` tags), or **JSON** (as escaped key-value mappings).
-- **Clipboard Integration**: Automatically copies output to your system clipboard (`pbcopy`/`xclip`/`xsel`/`wl-copy`/`clip` are automatically detected and used).
+</div>
 
 ---
 
-## Installation
+## ✨ Why supcat?
 
-### 1. From Official APT Repository (Ubuntu / Debian)
+Copy-pasting files into ChatGPT or Claude one by one is slow and error-prone. `supcat` gives you a fast, keyboard-driven TUI to **pick exactly the files you need**, see what you're selecting before you send it, and export it all in one clean, structured block — formatted the way LLMs like it best.
 
-You can install `supcat` and keep it updated via the official APT repository hosted on GitHub Pages:
+## 🚀 Features
+
+| | |
+|---|---|
+| 🗂️ **Split-Pane Layout** | Interactive TUI with a directory tree on the left and a live code preview on the right |
+| ☑️ **Multi-Selection** | Select or deselect files and entire subtrees recursively (`☑` / `☐`) |
+| 🔍 **Instant Filtering** | Search and filter the directory tree on the fly with `/` |
+| 🎨 **Syntax Highlighting** | Built-in, lightweight highlighting for keywords, strings, and comments — skips binaries safely, previews files under 1MB |
+| 🙈 **Gitignore Aware** | Respects `.gitignore` and `.ignore` rules (global and parent) out of the box |
+| 📄 **Multiple Export Formats** | Plain Text, Markdown (with language-tagged code blocks), XML (`<file path="...">`), or JSON |
+| 📋 **Clipboard Integration** | Auto-detects and uses `pbcopy` / `xclip` / `xsel` / `wl-copy` / `clip` |
+
+---
+
+## 📦 Installation
+
+### Option 1 — APT Repository (Ubuntu / Debian)
+
+Install and keep `supcat` updated via the official APT repo:
 
 ```bash
-# 1. Download and add the GPG signing key
+# 1. Add the GPG signing key
 curl -fsSL https://raiyanu.github.io/supcat/public.key \
   | sudo gpg --dearmor -o /usr/share/keyrings/supcat.gpg
 
-# 2. Add the APT repository source
+# 2. Add the APT source
 echo "deb [signed-by=/usr/share/keyrings/supcat.gpg] https://raiyanu.github.io/supcat stable main" \
   | sudo tee /etc/apt/sources.list.d/supcat.list
 
-# 3. Update package lists and install supcat
+# 3. Install
 sudo apt update
 sudo apt install supcat
 ```
 
-### 2. Download from GitHub Releases
+### Option 2 — GitHub Releases
 
-Pre-compiled binaries, installers, and `.deb` packages are generated for every release. You can download them directly from the [GitHub Releases Page](https://github.com/raiyanu/supcat/releases).
+Pre-compiled binaries, installers, and `.deb` packages are published with every release.
 
-Supported platform targets:
-- **Linux**: `x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu`
-- **macOS**: `x86_64-apple-darwin`, `aarch64-apple-darwin`
-- **Windows**: `x86_64-pc-windows-msvc`
+👉 **[Download from the Releases page](https://github.com/raiyanu/supcat/releases)**
 
-### 3. Build from Source
+| Platform | Targets |
+|---|---|
+| 🐧 Linux | `x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu` |
+| 🍎 macOS | `x86_64-apple-darwin`, `aarch64-apple-darwin` |
+| 🪟 Windows | `x86_64-pc-windows-msvc` |
 
-If you have Rust and Cargo installed, you can build `supcat` from source:
+### Option 3 — Build from Source
 
 ```bash
-# Clone the repository
 git clone https://github.com/raiyanu/supcat.git
 cd supcat
-
-# Build the release binary
 cargo build --release
 ```
 
-The compiled binary will be available at `target/release/supcat`. You can move it into your system's `PATH` (e.g., `/usr/local/bin/`).
+The compiled binary lands at `target/release/supcat` — move it into your `PATH` (e.g. `/usr/local/bin/`) to use it anywhere.
 
 ---
 
-## Usage
-
-Run `supcat` in your terminal, optionally specifying a starting path:
+## 🛠️ Usage
 
 ```bash
 supcat [options] [path]
 ```
 
-### Options
-
-* `-h`, `--help` : Show help message and exit.
-* `-a`, `--hidden` : Include hidden files and directories in traversal.
-* `--no-gitignore` : Do not respect `.gitignore` or `.ignore` rules.
-* `--symlinks` : Follow symbolic links during traversal.
-* `--max-depth <depth>` : Limit the directory traversal depth.
-* `--format <format>` : Set the initial formatting option: `plain`, `markdown`/`md`, `xml`, `json` (default is `plain`).
-* `-c`, `--clipboard` : Copy final context to the clipboard instead of printing to stdout.
+| Flag | Description |
+|---|---|
+| `-h`, `--help` | Show help message and exit |
+| `-a`, `--hidden` | Include hidden files and directories in traversal |
+| `--no-gitignore` | Ignore `.gitignore` / `.ignore` rules |
+| `--symlinks` | Follow symbolic links during traversal |
+| `--max-depth <depth>` | Limit directory traversal depth |
+| `--format <format>` | Set initial output format: `plain`, `markdown`/`md`, `xml`, `json` (default: `plain`) |
+| `-c`, `--clipboard` | Copy the final context to the clipboard instead of printing to stdout |
 
 ---
 
-## Interactive TUI Controls
-
-When in the TUI, the following keyboard controls are supported:
+## ⌨️ Interactive TUI Controls
 
 | Key | Action |
-|---|---|
+|:---:|---|
 | `↑` / `↓` | Move cursor up or down |
 | `←` / `→` | Collapse or expand directory |
-| `Space` | Toggle selection of the current item (runs recursively for directories) |
+| `Space` | Toggle selection of current item (recursive for directories) |
 | `Tab` | Toggle selection of the current subtree |
-| `a` | Select or deselect all items in the workspace |
-| `/` | Open the search prompt to filter the file explorer |
-| `f` | Cycle through output formats (Plain Text, Markdown, XML, JSON) |
-| `PageUp` / `PageDown` | Scroll code preview window by pages |
-| `[` / `]` | Scroll code preview window by lines |
-| `Enter` | Confirm selection, export context to clipboard/stdout, and exit |
+| `a` | Select or deselect all items |
+| `/` | Open search prompt to filter the tree |
+| `f` | Cycle through output formats |
+| `PageUp` / `PageDown` | Scroll preview by pages |
+| `[` / `]` | Scroll preview by lines |
+| `Enter` | Export selection to clipboard/stdout and exit |
 | `q` / `Esc` | Quit without exporting |
 
 ---
 
-## License
+## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+Licensed under the [MIT License](LICENSE).
+
+<div align="center">
+
+Made with 🦀 by [raiyanu](https://github.com/raiyanu)
+
+</div>
