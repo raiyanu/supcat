@@ -30,6 +30,7 @@ jobs:
           sudo apt-get install -y \
             dpkg-dev \
             apt-utils \
+            apt-transport-https \
             xz-utils \
             gnupg
 
@@ -41,7 +42,6 @@ jobs:
 
           gpg --batch --import private.asc
 
-          echo "=== Secret Keys ==="
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Get latest release tag
@@ -56,7 +56,7 @@ jobs:
 
       - name: Download Linux archive
         run: |
-          mkdir release
+          mkdir -p release
 
           gh release download \
             "${{ steps.release.outputs.tag }}" \
@@ -102,7 +102,7 @@ jobs:
 
           mv pkg.deb "supcat_${VERSION}_amd64.deb"
 
-      - name: Upload Debian package
+      - name: Upload Debian package to Release
         run: |
           gh release upload \
             "${{ steps.release.outputs.tag }}" \
@@ -123,26 +123,24 @@ jobs:
           dpkg-scanpackages repo/pool /dev/null \
             > repo/dists/stable/main/binary-amd64/Packages
 
-          gzip -kf repo/dists/stable/main/binary-amd64/Packages
+          gzip -9kf repo/dists/stable/main/binary-amd64/Packages
 
-          apt-ftparchive release repo/dists/stable \
-            > repo/dists/stable/Release.body
-
-          cat > repo/dists/stable/Release <<EOF
-          Origin: SupCat
-          Label: SupCat
-          Suite: stable
-          Codename: stable
-          Architectures: amd64
-          Components: main
-          Description: SupCat APT Repository
-
+          cat > apt-release.conf <<EOF
+          APT::FTPArchive::Release {
+            Origin "SupCat";
+            Label "SupCat";
+            Suite "stable";
+            Codename "stable";
+            Architectures "amd64";
+            Components "main";
+            Description "SupCat APT Repository";
+          };
           EOF
 
-          cat repo/dists/stable/Release.body \
-            >> repo/dists/stable/Release
-
-          rm repo/dists/stable/Release.body
+          apt-ftparchive \
+            -c apt-release.conf \
+            release repo/dists/stable \
+            > repo/dists/stable/Release
 
           gpg \
             --batch \
@@ -161,15 +159,21 @@ jobs:
             --output repo/dists/stable/InRelease \
             repo/dists/stable/Release
 
-          find repo
+          echo "===== Repository Layout ====="
+          find repo -type f | sort
+
+          echo
+          echo "===== Release ====="
+          cat repo/dists/stable/Release
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: repo
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
       - name: Deploy Pages
+        id: deployment
         uses: actions/deploy-pages@v5
