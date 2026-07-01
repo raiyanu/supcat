@@ -2,6 +2,18 @@
 name = "supcat"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/raiyanu/supcat"
+description = "Supabase CLI is a command-line interface for Supabase"
+homepage = "https://github.com/raiyanu/supcat"
+authors = ["Raiyan <raiyan.c.me@gmail.com>"]
+
+
+[package.metadata.wix]
+upgrade-guid = "B3254B34-B06A-46A1-BBCC-5E30D32081BB"
+path-guid = "2BF3C199-6C6E-41FC-BDC9-9774BF335537"
+license = false
+eula = false
+
 
 [dependencies]
 common = { path = "../common" }
