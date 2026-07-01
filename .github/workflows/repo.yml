@@ -23,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install packaging tools
+      - name: Install packages
         run: |
           sudo apt-get update
           sudo apt-get install -y dpkg-dev xz-utils
@@ -34,19 +34,24 @@ jobs:
           TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Download Linux release asset
+      - name: Download Linux release archive
         run: |
-          mkdir release
+          mkdir -p release
 
           gh release download \
             "${{ steps.release.outputs.tag }}" \
             --pattern "supcat-x86_64-unknown-linux-gnu.tar.xz" \
             --dir release
 
-      - name: Extract binary
+      - name: Extract release archive
         run: |
-          cd release
-          tar -xf supcat-x86_64-unknown-linux-gnu.tar.xz
+          tar -xf release/supcat-x86_64-unknown-linux-gnu.tar.xz -C release
+
+          ROOT=$(find release -mindepth 1 -maxdepth 1 -type d | head -1)
+
+          echo "ROOT=$ROOT" >> "$GITHUB_ENV"
+
+          ls -R "$ROOT"
 
       - name: Build Debian package
         run: |
@@ -57,10 +62,11 @@ jobs:
           mkdir -p pkg/usr/bin
           mkdir -p pkg/usr/share/doc/supcat
 
-          cp release/supcat pkg/usr/bin/
+          cp "$ROOT/supcat" pkg/usr/bin/supcat
           chmod 755 pkg/usr/bin/supcat
 
-          cp README.md pkg/usr/share/doc/supcat/
+          cp "$ROOT/README.md" pkg/usr/share/doc/supcat/
+          cp "$ROOT/LICENSE" pkg/usr/share/doc/supcat/
 
           cat > pkg/DEBIAN/control <<EOF
           Package: supcat
@@ -85,14 +91,15 @@ jobs:
 
       - name: Build APT repository
         run: |
-          mkdir repo
+          mkdir -p repo
 
           cp -r www/* repo/
           cp supcat_*_amd64.deb repo/
 
           cd repo
 
-          dpkg-scanpackages . /dev/null | gzip -9 > Packages.gz
+          dpkg-scanpackages . /dev/null > Packages
+          gzip -kf Packages
 
           cat > Release <<EOF
           Origin: SupCat
