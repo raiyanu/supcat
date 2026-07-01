@@ -3,17 +3,10 @@ name: Publish Repository
 on:
   workflow_dispatch:
 
-  workflow_run:
-    workflows:
-      - Release
-    types:
-      - completed
-
 permissions:
   contents: write
   pages: write
   id-token: write
-  actions: read
 
 concurrency:
   group: repo
@@ -21,65 +14,81 @@ concurrency:
 
 jobs:
   publish:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev xz-utils
 
       - name: Get latest release tag
         id: release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout release tag
+      - name: Download Linux release asset
         run: |
-          git fetch --tags
-          git checkout "${{ steps.release.outputs.tag }}"
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
-
-      - name: Build binary
-        run: cargo build --release -p supcat
-
-      - name: Build Debian package
-        run: cargo deb -p supcat
-
-      - name: Download release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p release-assets
+          mkdir release
 
           gh release download \
             "${{ steps.release.outputs.tag }}" \
-            --dir release-assets
+            --pattern "supcat-x86_64-unknown-linux-gnu.tar.xz" \
+            --dir release
 
-      - name: Upload Debian package to Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract binary
+        run: |
+          cd release
+          tar -xf supcat-x86_64-unknown-linux-gnu.tar.xz
+
+      - name: Build Debian package
+        run: |
+          VERSION="${{ steps.release.outputs.tag }}"
+          VERSION="${VERSION#v}"
+
+          mkdir -p pkg/DEBIAN
+          mkdir -p pkg/usr/bin
+          mkdir -p pkg/usr/share/doc/supcat
+
+          cp release/supcat pkg/usr/bin/
+          chmod 755 pkg/usr/bin/supcat
+
+          cp README.md pkg/usr/share/doc/supcat/
+
+          cat > pkg/DEBIAN/control <<EOF
+          Package: supcat
+          Version: ${VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Raiyan <raiyan.c.me@gmail.com>
+          Description: Modern terminal super version of cat command
+          EOF
+
+          dpkg-deb --build pkg
+
+          mv pkg.deb "supcat_${VERSION}_amd64.deb"
+
+      - name: Upload Debian package
         run: |
           gh release upload \
             "${{ steps.release.outputs.tag }}" \
-            target/debian/*.deb \
+            supcat_*_amd64.deb \
             --clobber
 
-      - name: Prepare APT repository
+      - name: Build APT repository
         run: |
-          mkdir -p repo
+          mkdir repo
 
           cp -r www/* repo/
-          cp target/debian/*.deb repo/
+          cp supcat_*_amd64.deb repo/
 
           cd repo
 
@@ -90,7 +99,6 @@ jobs:
           Label: SupCat
           Suite: stable
           Codename: stable
-          Version: ${{ steps.release.outputs.tag }}
           Architectures: amd64
           Components: main
           Description: SupCat APT Repository
