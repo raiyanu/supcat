@@ -39,10 +39,7 @@ jobs:
           APT_PRIVATE_KEY: ${{ secrets.APT_PRIVATE_KEY }}
         run: |
           printf "%s" "$APT_PRIVATE_KEY" > private.asc
-
           gpg --batch --import private.asc
-
-          gpg --list-secret-keys --keyid-format LONG
 
       - name: Get latest release tag
         id: release
@@ -70,8 +67,6 @@ jobs:
           ROOT=$(find release -mindepth 1 -maxdepth 1 -type d | head -1)
 
           echo "ROOT=$ROOT" >> "$GITHUB_ENV"
-
-          ls -R "$ROOT"
 
       - name: Build Debian package
         run: |
@@ -120,10 +115,12 @@ jobs:
 
           cp supcat_*_amd64.deb repo/pool/main/
 
-          dpkg-scanpackages repo/pool /dev/null \
-            > repo/dists/stable/main/binary-amd64/Packages
+          cd repo
 
-          gzip -9kf repo/dists/stable/main/binary-amd64/Packages
+          dpkg-scanpackages pool /dev/null \
+            > dists/stable/main/binary-amd64/Packages
+
+          gzip -9kf dists/stable/main/binary-amd64/Packages
 
           cat > apt-release.conf <<EOF
           APT::FTPArchive::Release {
@@ -139,8 +136,8 @@ jobs:
 
           apt-ftparchive \
             -c apt-release.conf \
-            release repo/dists/stable \
-            > repo/dists/stable/Release
+            release dists/stable \
+            > dists/stable/Release
 
           gpg \
             --batch \
@@ -148,23 +145,16 @@ jobs:
             --pinentry-mode loopback \
             --armor \
             --detach-sign \
-            --output repo/dists/stable/Release.gpg \
-            repo/dists/stable/Release
+            --output dists/stable/Release.gpg \
+            dists/stable/Release
 
           gpg \
             --batch \
             --yes \
             --pinentry-mode loopback \
             --clearsign \
-            --output repo/dists/stable/InRelease \
-            repo/dists/stable/Release
-
-          echo "===== Repository Layout ====="
-          find repo -type f | sort
-
-          echo
-          echo "===== Release ====="
-          cat repo/dists/stable/Release
+            --output dists/stable/InRelease \
+            dists/stable/Release
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -175,5 +165,4 @@ jobs:
           path: repo
 
       - name: Deploy Pages
-        id: deployment
         uses: actions/deploy-pages@v5
