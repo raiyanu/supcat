@@ -26,26 +26,37 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
+
           sudo apt-get install -y \
             dpkg-dev \
             apt-utils \
-            xz-utils
+            xz-utils \
+            gnupg
 
-      - name: Import GPG key
+      - name: Import signing key
         env:
           APT_PRIVATE_KEY: ${{ secrets.APT_PRIVATE_KEY }}
         run: |
-          echo "$APT_PRIVATE_KEY" | gpg --batch --import
+          printf "%s" "$APT_PRIVATE_KEY" > private.asc
+
+          gpg --batch --import private.asc
+
+          echo "=== Secret Keys ==="
+          gpg --list-secret-keys --keyid-format LONG
 
       - name: Get latest release tag
         id: release
         run: |
-          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          TAG=$(gh release list \
+            --limit 1 \
+            --json tagName \
+            --jq '.[0].tagName')
+
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Download Linux archive
         run: |
-          mkdir -p release
+          mkdir release
 
           gh release download \
             "${{ steps.release.outputs.tag }}" \
@@ -99,8 +110,6 @@ jobs:
             --clobber
 
       - name: Build APT repository
-        env:
-          KEY_ID: ${{ secrets.APT_KEY_ID }}
         run: |
           mkdir -p repo
 
@@ -117,12 +126,28 @@ jobs:
           gzip -kf repo/dists/stable/main/binary-amd64/Packages
 
           apt-ftparchive release repo/dists/stable \
-            > repo/dists/stable/Release
+            > repo/dists/stable/Release.body
+
+          cat > repo/dists/stable/Release <<EOF
+          Origin: SupCat
+          Label: SupCat
+          Suite: stable
+          Codename: stable
+          Architectures: amd64
+          Components: main
+          Description: SupCat APT Repository
+
+          EOF
+
+          cat repo/dists/stable/Release.body \
+            >> repo/dists/stable/Release
+
+          rm repo/dists/stable/Release.body
 
           gpg \
             --batch \
             --yes \
-            --default-key "$KEY_ID" \
+            --pinentry-mode loopback \
             --armor \
             --detach-sign \
             --output repo/dists/stable/Release.gpg \
@@ -131,7 +156,7 @@ jobs:
           gpg \
             --batch \
             --yes \
-            --default-key "$KEY_ID" \
+            --pinentry-mode loopback \
             --clearsign \
             --output repo/dists/stable/InRelease \
             repo/dists/stable/Release
@@ -147,5 +172,4 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Deploy Pages
-        id: deployment
         uses: actions/deploy-pages@v5
