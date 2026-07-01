@@ -1,0 +1,89 @@
+name: Publish Repository
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: repo
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+
+      - name: Build release binary
+        run: cargo build --release -p supcat
+
+      - name: Build Debian package
+        run: cargo deb -p supcat
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir release-assets
+          gh release download "${{ github.event.release.tag_name }}" \
+            --dir release-assets
+
+      - name: Upload deb to Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload \
+            "${{ github.event.release.tag_name }}" \
+            target/debian/*.deb \
+            --clobber
+
+      - name: Prepare repository
+        run: |
+          mkdir -p repo
+
+          # existing website
+          cp -r www/* repo/
+
+          # deb package
+          cp target/debian/*.deb repo/
+
+          cd repo
+
+          dpkg-scanpackages . /dev/null | gzip -9 > Packages.gz
+
+          cat > Release <<EOF
+          Origin: SupCat
+          Label: SupCat
+          Suite: stable
+          Codename: stable
+          Version: ${{ github.event.release.tag_name }}
+          Architectures: amd64
+          Components: main
+          Description: SupCat APT Repository
+          EOF
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./repo
+
+      - name: Deploy Pages
+        uses: actions/deploy-pages@v5
