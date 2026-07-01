@@ -1,14 +1,17 @@
 name: Publish Repository
 
 on:
-  release:
+  workflow_run:
+    workflows:
+      - Release
     types:
-      - published
+      - completed
 
 permissions:
   contents: write
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: repo
@@ -16,7 +19,7 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout
@@ -40,8 +43,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+
           mkdir release-assets
-          gh release download "${{ github.event.release.tag_name }}" \
+
+          gh release download "$TAG" \
             --dir release-assets
 
       - name: Upload deb to Release
