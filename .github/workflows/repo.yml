@@ -1,11 +1,11 @@
 name: Publish Repository
 
 on:
-  workflow_run:
-    workflows:
-      - Release
+  release:
     types:
-      - completed
+      - published
+      - edited
+      - released
 
 permissions:
   contents: write
