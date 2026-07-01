@@ -94,14 +94,18 @@ jobs:
           mkdir -p repo
 
           cp -r www/* repo/
-          cp supcat_*_amd64.deb repo/
 
-          cd repo
+          mkdir -p repo/pool/main
+          mkdir -p repo/dists/stable/main/binary-amd64
 
-          dpkg-scanpackages . /dev/null > Packages
-          gzip -kf Packages
+          cp supcat_*_amd64.deb repo/pool/main/
 
-          cat > Release <<EOF
+          dpkg-scanpackages repo/pool /dev/null \
+            > repo/dists/stable/main/binary-amd64/Packages
+
+          gzip -kf repo/dists/stable/main/binary-amd64/Packages
+
+          cat > repo/dists/stable/Release <<EOF
           Origin: SupCat
           Label: SupCat
           Suite: stable
@@ -110,6 +114,8 @@ jobs:
           Components: main
           Description: SupCat APT Repository
           EOF
+
+          find repo
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
