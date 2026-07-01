@@ -1,11 +1,13 @@
 name: Publish Repository
 
 on:
-  release:
+  workflow_dispatch:
+
+  workflow_run:
+    workflows:
+      - Release
     types:
-      - published
-      - edited
-      - released
+      - completed
 
 permissions:
   contents: write
@@ -19,7 +21,7 @@ concurrency:
 
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -103,5 +105,4 @@ jobs:
           path: ./repo
 
       - name: Deploy Pages
-        id: deployment
         uses: actions/deploy-pages@v5
