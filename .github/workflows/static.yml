@@ -35,11 +35,15 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Prepare Pages
+        run: |
+          mkdir pages
+          cp -a www/. pages/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: './www'
+          path: ./pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
